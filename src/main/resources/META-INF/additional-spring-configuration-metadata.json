@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "cert.image.base64",
+      "type": "java.lang.String",
+      "description": "Description for cert.image.base64."
+  }
+] }
