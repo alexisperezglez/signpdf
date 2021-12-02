@@ -20,6 +20,10 @@ public class Setting {
     public static final String KEYSTORE = "./src/test/resources/encryption/ks";
     public static final String SRC = "./src/test/resources/pdfs/hello.pdf";
 
+    public static final String CRLPATH = "https://integropki.softel.cu/ank-webfront-public/GetCRL";
+    public static final String AICAPROXYIP = "10.25.27.10";
+    public static final int AICAPROXYPORT = 3128;
+
     public static final char[] PASSWORD = "password".toCharArray();
 
     public static final String[] RESULT_FILES = new String[] {
