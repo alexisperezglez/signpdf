@@ -4,13 +4,15 @@ import cu.cujae.aica.signdigital.cross.Setting;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
 
-public class ClientAgent {
+@Service
+public class ClientAgent implements IClientAgent{
     private final Setting setting;
 
     public ClientAgent(Setting setting) {

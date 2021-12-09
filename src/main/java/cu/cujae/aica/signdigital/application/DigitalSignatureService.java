@@ -46,7 +46,7 @@ public class DigitalSignatureService implements IDigitalSignatureService {
         byte[] cert = Base64.getDecoder().decode(signPDFIn.getPrivateKey());
         InputStream certIs = new ByteArrayInputStream(cert);
 
-        KeyStore keyStore = null;
+        KeyStore keyStore;
         try {
             byte[] img = Base64.getDecoder().decode(setting.getImgSrc());
 //            Image image = Image.getInstance(img);
