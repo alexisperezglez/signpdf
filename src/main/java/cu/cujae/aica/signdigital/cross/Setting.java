@@ -8,21 +8,21 @@ import org.springframework.context.annotation.Configuration;
 @Getter
 public class Setting {
 
-    @Value("${cert.image.base64}")
-    private String imgSrc;
-
     @Value("${api.rest.client}")
     private String clientBase;
+
+    @Value("${pki.integro.crl_path}")
+    private String crlPath;
+    @Value("${aica.proxy.ip}")
+    private String aicaProxyIp;
+    @Value("${aica.proxy.port}")
+    private Integer aicaProxyPort;
 
     // public static final String DEST = "./target/signatures/chapter02/";
     public static final String DEST = "D:\\Condultoria\\source\\signdigital\\target\\signatures\\chapter02\\";
 
     public static final String KEYSTORE = "./src/test/resources/encryption/ks";
     public static final String SRC = "./src/test/resources/pdfs/hello.pdf";
-
-    public static final String CRLPATH = "https://integropki.softel.cu/ank-webfront-public/GetCRL";
-    public static final String AICAPROXYIP = "10.25.27.10";
-    public static final int AICAPROXYPORT = 3128;
 
     public static final char[] PASSWORD = "password".toCharArray();
 

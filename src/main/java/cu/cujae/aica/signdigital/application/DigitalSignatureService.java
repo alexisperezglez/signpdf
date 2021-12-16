@@ -156,8 +156,8 @@ public class DigitalSignatureService implements IDigitalSignatureService {
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
 
-            URL url = new URL(Setting.CRLPATH);
-            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(Setting.AICAPROXYIP, Setting.AICAPROXYPORT));
+            URL url = new URL(setting.getCrlPath());
+            Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(setting.getAicaProxyIp(), setting.getAicaProxyPort()));
             URLConnection connection = url.openConnection(proxy);
             InputStream is = connection.getInputStream();
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X509");
