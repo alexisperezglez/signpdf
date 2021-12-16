@@ -22,9 +22,10 @@ public class ClientAgent implements IClientAgent{
     public Mono<Boolean> sendSignedPdf(File file) {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", file);
+        builder.part("name", "formulario");
         return WebClient.create(setting.getClientBase())
                 .post()
-                .uri(uriBuilder -> uriBuilder.path("/pdf").build())
+                .uri(uriBuilder -> uriBuilder.path("/document").build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .exchangeToMono(clientResponse -> {

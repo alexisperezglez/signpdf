@@ -94,12 +94,17 @@ public class DigitalSignatureService implements IDigitalSignatureService {
 
             // Sign the document using the detached mode, CMS or CAdES equivalent.
             signer.signDetached(digest, pks, chain, null, null, null, 0, PdfSigner.CryptoStandard.CADES);
-            String val = Base64.getEncoder().encodeToString(((ByteArrayOutputStream) os).toByteArray());
+//            String val = Base64.getEncoder().encodeToString(((ByteArrayOutputStream) os).toByteArray());
+            File file = File.createTempFile("formulario", ".pdf");
+            FileOutputStream fileOutputStream = new FileOutputStream(file);
+            fileOutputStream.write(((ByteArrayOutputStream) os).toByteArray());
+            fileOutputStream.close();
+
+            return this.clientAgent.sendSignedPdf(file).block();
         } catch (IOException | GeneralSecurityException e) {
             e.printStackTrace();
             return Boolean.FALSE;
         }
-        return Boolean.TRUE;
     }
 
     private boolean isDateValid(X509Certificate x509Certificate) {
