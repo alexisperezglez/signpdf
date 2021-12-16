@@ -34,4 +34,5 @@ public class SignPDFIn {
     @NotBlank(message = "error.imageRequerido")
     @NotNull(message = "error.imageRequerido")
     private String image;
+    private String username;
 }

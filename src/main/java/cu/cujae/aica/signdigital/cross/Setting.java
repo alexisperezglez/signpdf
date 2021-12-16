@@ -14,7 +14,7 @@ public class Setting {
     @Value("${api.rest.client}")
     private String clientBase;
 
-//    public static final String DEST = "./target/signatures/chapter02/";
+    // public static final String DEST = "./target/signatures/chapter02/";
     public static final String DEST = "D:\\Condultoria\\source\\signdigital\\target\\signatures\\chapter02\\";
 
     public static final String KEYSTORE = "./src/test/resources/encryption/ks";

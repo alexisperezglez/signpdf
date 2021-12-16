@@ -7,6 +7,8 @@ import com.itextpdf.signatures.*;
 import cu.cujae.aica.signdigital.client.IClientAgent;
 import cu.cujae.aica.signdigital.cross.Setting;
 import cu.cujae.aica.signdigital.dto.SignPDFIn;
+import cu.cujae.aica.signdigital.repositories.IConfigDb;
+import cu.cujae.aica.signdigital.repositories.dto.UserConfigDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ import java.security.*;
 import java.security.cert.*;
 import java.security.cert.Certificate;
 import java.util.Base64;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,14 +35,17 @@ import java.util.Map;
 public class DigitalSignatureService implements IDigitalSignatureService {
     private final Setting setting;
     private final IClientAgent clientAgent;
+    private final IConfigDb configDb;
 
-    public DigitalSignatureService(Setting setting, IClientAgent clientAgent) {
+    public DigitalSignatureService(Setting setting, IClientAgent clientAgent, IConfigDb configDb) {
         this.setting = setting;
         this.clientAgent = clientAgent;
+        this.configDb = configDb;
     }
 
     @Override
     public Boolean signPdf(SignPDFIn signPDFIn) {
+        UserConfigDTO configByUser = this.configDb.getConfigByUser(signPDFIn.getUsername());
         byte[] pdf = Base64.getDecoder().decode(signPDFIn.getFile());
         InputStream pdfIs = new ByteArrayInputStream(pdf);
 
@@ -48,8 +54,7 @@ public class DigitalSignatureService implements IDigitalSignatureService {
 
         KeyStore keyStore;
         try {
-            byte[] img = Base64.getDecoder().decode(setting.getImgSrc());
-//            Image image = Image.getInstance(img);
+            byte[] img = Base64.getDecoder().decode(configByUser.getImage());
 
             BouncyCastleProvider provider = new BouncyCastleProvider();
             Security.addProvider(provider);
@@ -59,11 +64,11 @@ public class DigitalSignatureService implements IDigitalSignatureService {
             PrivateKey pk = (PrivateKey) keyStore.getKey(alias, signPDFIn.getPassword().toCharArray());
             Certificate[] chain = keyStore.getCertificateChain(alias);
 
-            X509Certificate x509Certificate = this.loadCertificateFromStream(certIs, signPDFIn.getPassword());
+            X509Certificate x509Certificate = ((X509Certificate)keyStore.getCertificate("key"));
             Map<String, String> info = this.getCertificateInformation(x509Certificate);
 
             PdfReader reader = new PdfReader(pdfIs);
-            OutputStream os = new FileOutputStream(Setting.DEST);
+            OutputStream os = new ByteArrayOutputStream();
             PdfSigner signer = new PdfSigner(reader, os, true);
 
             // Create the signature appearance
@@ -79,34 +84,22 @@ public class DigitalSignatureService implements IDigitalSignatureService {
                     .setReuseAppearance(false)
                     .setPageRect(rect)
                     .setImage(ImageDataFactory.createRawImage(img))
+                    .setSignatureGraphic(ImageDataFactory.createRawImage(img))
+                    .setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION)
                     .setPageNumber(1);
             signer.setFieldName("sig");
 
-            IExternalSignature pks = new PrivateKeySignature(pk, pk.getAlgorithm(), provider.getName());
+            IExternalSignature pks = new PrivateKeySignature(pk, DigestAlgorithms.SHA512, provider.getName());
             IExternalDigest digest = new BouncyCastleDigest();
 
             // Sign the document using the detached mode, CMS or CAdES equivalent.
             signer.signDetached(digest, pks, chain, null, null, null, 0, PdfSigner.CryptoStandard.CADES);
-
+            String val = Base64.getEncoder().encodeToString(((ByteArrayOutputStream) os).toByteArray());
         } catch (IOException | GeneralSecurityException e) {
             e.printStackTrace();
             return Boolean.FALSE;
         }
         return Boolean.TRUE;
-    }
-
-    private X509Certificate loadCertificateFromStream(InputStream certStream, @NotEmpty(message = "error.claveRequerida") @NotBlank(message = "error.claveRequerida") @NotNull(message = "error.claveRequerida") String password) {
-        CertificateFactory cf;
-        X509Certificate cert = null;
-        try {
-            cf = CertificateFactory.getInstance("x509");
-            cert = (X509Certificate) cf.generateCertificate(certStream);
-            certStream.close();
-        } catch (IOException | java.security.cert.CertificateException e) {
-            e.printStackTrace();
-        }
-
-        return cert;
     }
 
     private boolean isDateValid(X509Certificate x509Certificate) {
