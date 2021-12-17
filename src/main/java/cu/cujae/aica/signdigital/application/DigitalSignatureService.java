@@ -5,6 +5,8 @@ import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.signatures.*;
 import cu.cujae.aica.signdigital.client.IClientAgent;
+import cu.cujae.aica.signdigital.client.ISignsConfAgent;
+import cu.cujae.aica.signdigital.client.dto.WorkersResponse;
 import cu.cujae.aica.signdigital.cross.Setting;
 import cu.cujae.aica.signdigital.dto.SignPDFIn;
 import cu.cujae.aica.signdigital.repositories.IConfigDb;
@@ -12,99 +14,120 @@ import cu.cujae.aica.signdigital.repositories.dto.UserConfigDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
 import java.io.*;
 import java.net.*;
 import java.security.*;
 import java.security.cert.*;
 import java.security.cert.Certificate;
 import java.util.Base64;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 @Slf4j
 public class DigitalSignatureService implements IDigitalSignatureService {
     private final Setting setting;
     private final IClientAgent clientAgent;
+    private final ISignsConfAgent signsConfAgent;
     private final IConfigDb configDb;
 
-    public DigitalSignatureService(Setting setting, IClientAgent clientAgent, IConfigDb configDb) {
+    public DigitalSignatureService(Setting setting, IClientAgent clientAgent, ISignsConfAgent signsConfAgent, IConfigDb configDb) {
         this.setting = setting;
         this.clientAgent = clientAgent;
+        this.signsConfAgent = signsConfAgent;
         this.configDb = configDb;
     }
 
     @Override
-    public Boolean signPdf(SignPDFIn signPDFIn) {
+    public Mono<Boolean> signPdf(SignPDFIn signPDFIn) {
         UserConfigDTO configByUser = this.configDb.getConfigByUser(signPDFIn.getUsername());
+
         byte[] pdf = Base64.getDecoder().decode(signPDFIn.getFile());
         InputStream pdfIs = new ByteArrayInputStream(pdf);
 
         byte[] cert = Base64.getDecoder().decode(signPDFIn.getPrivateKey());
         InputStream certIs = new ByteArrayInputStream(cert);
 
-        KeyStore keyStore;
-        try {
-            byte[] img = Base64.getDecoder().decode(configByUser.getImage());
+        byte[] img = Base64.getDecoder().decode(configByUser.getImage());
 
-            BouncyCastleProvider provider = new BouncyCastleProvider();
-            Security.addProvider(provider);
-            keyStore = KeyStore.getInstance("pkcs12", provider);
-            keyStore.load(certIs, signPDFIn.getPassword().toCharArray());
-            String alias = keyStore.aliases().nextElement();
-            PrivateKey pk = (PrivateKey) keyStore.getKey(alias, signPDFIn.getPassword().toCharArray());
-            Certificate[] chain = keyStore.getCertificateChain(alias);
+        return this.signsConfAgent.getSignsConf(signPDFIn.getStage())
+                .publishOn(Schedulers.boundedElastic())
+                .map(signsConfResponses -> {
+                    try {
+                        BouncyCastleProvider provider = new BouncyCastleProvider();
+                        Security.addProvider(provider);
+                        KeyStore keyStore = KeyStore.getInstance("pkcs12", provider);
+                        keyStore.load(certIs, signPDFIn.getPassword().toCharArray());
+                        String alias = keyStore.aliases().nextElement();
+                        PrivateKey pk = (PrivateKey) keyStore.getKey(alias, signPDFIn.getPassword().toCharArray());
+                        Certificate[] chain = keyStore.getCertificateChain(alias);
 
-            X509Certificate x509Certificate = ((X509Certificate)keyStore.getCertificate("key"));
-            Map<String, String> info = this.getCertificateInformation(x509Certificate);
+                        X509Certificate x509Certificate = ((X509Certificate)keyStore.getCertificate("key"));
+                        Map<String, String> info = this.getCertificateInformation(x509Certificate);
 
-            PdfReader reader = new PdfReader(pdfIs);
-            OutputStream os = new ByteArrayOutputStream();
-            PdfSigner signer = new PdfSigner(reader, os, true);
+                        AtomicReference<WorkersResponse> workerResponse = new AtomicReference<>();
+                        signsConfResponses.forEach(signsConfResponse -> {
+                            signsConfResponse.getStepFormsResponses().forEach(stepFormsResponse -> {
+                                stepFormsResponse.getWorkersResponses().forEach(workersResponse -> {
+                                    if (workersResponse.getFullName().equalsIgnoreCase(info.get("Usuario"))) {
+                                        workerResponse.set(workersResponse);
+                                    }
+                                });
+                            });
+                        });
 
-            // Create the signature appearance
-            Rectangle rect = new Rectangle(36, 648, 200, 100);
-            PdfSignatureAppearance appearance = signer.getSignatureAppearance();
-            appearance
-                    .setReason(signPDFIn.getStage())
-                    .setLocation(info.get("Provincia"))
-                    .setContact(info.get("Usuario"))
+                        if (Optional.ofNullable(workerResponse.get()).isPresent()) {
+                            PdfReader reader = new PdfReader(pdfIs);
+                            OutputStream os = new ByteArrayOutputStream();
+                            PdfSigner signer = new PdfSigner(reader, os, true);
 
-                    // Specify if the appearance before field is signed will be used
-                    // as a background for the signed field. The "false" value is the default value.
-                    .setReuseAppearance(false)
-                    .setPageRect(rect)
-                    .setImage(ImageDataFactory.createRawImage(img))
-                    .setSignatureGraphic(ImageDataFactory.createRawImage(img))
-                    .setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION)
-                    .setPageNumber(1);
-            signer.setFieldName("sig");
+                            // Create the signature appearance
+                            Rectangle rect = new Rectangle(36, 648, 200, 100);
+                            PdfSignatureAppearance appearance = signer.getSignatureAppearance();
+                            appearance
+                                    .setReason(signPDFIn.getStage())
+                                    .setLocation(info.get("Provincia"))
+                                    .setContact(info.get("Usuario"))
 
-            IExternalSignature pks = new PrivateKeySignature(pk, DigestAlgorithms.SHA512, provider.getName());
-            IExternalDigest digest = new BouncyCastleDigest();
+                                    // Specify if the appearance before field is signed will be used
+                                    // as a background for the signed field. The "false" value is the default value.
+                                    .setReuseAppearance(false)
+                                    .setPageRect(rect)
+                                    .setImage(ImageDataFactory.createRawImage(img))
+                                    .setSignatureGraphic(ImageDataFactory.createRawImage(img))
+                                    .setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION)
+                                    .setPageNumber(1);
+                            signer.setFieldName("sig");
 
-            // Sign the document using the detached mode, CMS or CAdES equivalent.
-            signer.signDetached(digest, pks, chain, null, null, null, 0, PdfSigner.CryptoStandard.CADES);
-//            String val = Base64.getEncoder().encodeToString(((ByteArrayOutputStream) os).toByteArray());
-            File file = File.createTempFile("formulario", ".pdf");
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
-            fileOutputStream.write(((ByteArrayOutputStream) os).toByteArray());
-            fileOutputStream.close();
+                            IExternalSignature pks = new PrivateKeySignature(pk, DigestAlgorithms.SHA512, provider.getName());
+                            IExternalDigest digest = new BouncyCastleDigest();
 
-            return this.clientAgent.sendSignedPdf(file).block();
-        } catch (IOException | GeneralSecurityException e) {
-            e.printStackTrace();
-            return Boolean.FALSE;
-        }
+                            // Sign the document using the detached mode, CMS or CAdES equivalent.
+                            signer.signDetached(digest, pks, chain, null, null, null, 0, PdfSigner.CryptoStandard.CADES);
+                            // String val = Base64.getEncoder().encodeToString(((ByteArrayOutputStream) os).toByteArray());
+                            File file = File.createTempFile("formulario", ".pdf");
+                            FileOutputStream fileOutputStream = new FileOutputStream(file);
+                            fileOutputStream.write(((ByteArrayOutputStream) os).toByteArray());
+                            fileOutputStream.close();
+                            return file;
+                        }
+
+                        throw new RuntimeException("No se encuentra el usuario");
+                    } catch (GeneralSecurityException | IOException e) {
+                        e.printStackTrace();
+                        throw new RuntimeException("No se pudo firmar el documento", e);
+                    }
+                })
+                .zipWhen(this.clientAgent::sendSignedPdf, (file, oBoolean) -> oBoolean);
     }
 
     private boolean isDateValid(X509Certificate x509Certificate) {

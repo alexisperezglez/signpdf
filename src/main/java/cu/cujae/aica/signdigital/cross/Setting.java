@@ -10,6 +10,8 @@ public class Setting {
 
     @Value("${api.rest.client}")
     private String clientBase;
+    @Value("${api.rest.associates_signs}")
+    private String signsBase;
 
     @Value("${pki.integro.crl_path}")
     private String crlPath;

@@ -1,8 +1,9 @@
 package cu.cujae.aica.signdigital.application;
 
 import cu.cujae.aica.signdigital.dto.SignPDFIn;
+import reactor.core.publisher.Mono;
 
 public interface IDigitalSignatureService {
 
-    Boolean signPdf(SignPDFIn signPDFIn);
+    Mono<Boolean> signPdf(SignPDFIn signPDFIn);
 }

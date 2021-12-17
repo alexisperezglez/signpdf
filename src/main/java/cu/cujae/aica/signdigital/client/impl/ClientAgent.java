@@ -1,5 +1,6 @@
-package cu.cujae.aica.signdigital.client;
+package cu.cujae.aica.signdigital.client.impl;
 
+import cu.cujae.aica.signdigital.client.IClientAgent;
 import cu.cujae.aica.signdigital.cross.Setting;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -12,7 +13,7 @@ import reactor.core.publisher.Mono;
 import java.io.File;
 
 @Service
-public class ClientAgent implements IClientAgent{
+public class ClientAgent implements IClientAgent {
     private final Setting setting;
 
     public ClientAgent(Setting setting) {

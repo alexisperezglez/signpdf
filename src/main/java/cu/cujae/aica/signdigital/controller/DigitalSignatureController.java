@@ -23,7 +23,7 @@ public class DigitalSignatureController {
     @PostMapping("/v1/sign")
     public ResponseEntity<GeneralResponse<Boolean>> signPDF(@RequestBody GeneralRequest<SignPDFIn> request) {
         GeneralResponse<Boolean> response = new GeneralResponse<>();
-        Boolean result = this.digitalSignatureService.signPdf(request.getParams());
+        Boolean result = this.digitalSignatureService.signPdf(request.getParams()).block();
         response.setData(result);
         return ResponseEntity.ok(response);
     }
