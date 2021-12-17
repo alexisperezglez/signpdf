@@ -67,4 +67,15 @@ public class HandlerExceptionsController implements IHandlerExceptionController{
         e.printStackTrace();
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+    @Override
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponse> exceptionHandler(HttpRequest request, RuntimeException e) {
+        ErrorResponse error = getError(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(),
+                HttpStatus.INTERNAL_SERVER_ERROR.toString(), request.getURI().toString());
+
+        log.error(e.toString());
+        e.printStackTrace();
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }

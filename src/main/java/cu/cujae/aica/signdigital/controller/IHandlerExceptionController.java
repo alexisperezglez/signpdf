@@ -12,4 +12,5 @@ public interface IHandlerExceptionController {
     ResponseEntity<ErrorResponse> sqlExceptionHandler(HttpRequest request, SQLException e);
     ResponseEntity<ErrorResponse> nullPointerException(HttpRequest request, NullPointerException e);
     ResponseEntity<ErrorResponse> exceptionHandler(HttpRequest request, Exception e);
+    ResponseEntity<ErrorResponse> exceptionHandler(HttpRequest request, RuntimeException e);
 }
