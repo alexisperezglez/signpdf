@@ -8,6 +8,7 @@ import cu.cujae.aica.signdigital.client.IClientAgent;
 import cu.cujae.aica.signdigital.client.ISignsConfAgent;
 import cu.cujae.aica.signdigital.client.dto.WorkersResponse;
 import cu.cujae.aica.signdigital.cross.Setting;
+import cu.cujae.aica.signdigital.dto.DigitalSignConfIn;
 import cu.cujae.aica.signdigital.dto.SignPDFIn;
 import cu.cujae.aica.signdigital.repositories.IConfigDb;
 import cu.cujae.aica.signdigital.repositories.dto.UserConfigDTO;
@@ -45,6 +46,11 @@ public class DigitalSignatureService implements IDigitalSignatureService {
         this.clientAgent = clientAgent;
         this.signsConfAgent = signsConfAgent;
         this.configDb = configDb;
+    }
+
+    @Override
+    public Boolean saveConfig(DigitalSignConfIn digitalSignConfIn) {
+        return this.configDb.saveConfig(digitalSignConfIn);
     }
 
     @Override
