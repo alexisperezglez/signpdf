@@ -1,0 +1,23 @@
+version: '2'
+
+services:
+  app:
+    image: 'aica/signpdf:1.0.0'
+    build:
+      context: .
+    container_name: app
+    depends_on:
+      - db
+    environment:
+      - SIGNPDF_POSTGRES_URL=jdbc:postgresql://db:5432/pdf
+      - SIGNPDF_POSTGRES_USER=compose-postgres
+      - SPRING_DATASOURCE_PASSWORD=compose-postgres
+      - SIGNPDF_POSTGRES_PASS=update
+
+  db:
+    image: 'postgres:13.1-alpine'
+    container_name: db
+    environment:
+      - POSTGRES_DB=pdf
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres

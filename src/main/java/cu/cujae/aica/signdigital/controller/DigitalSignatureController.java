@@ -35,10 +35,10 @@ public class DigitalSignatureController implements IDigitalSignatureController {
 
     @Override
     @Operation(summary = "Almacenar configuracion de firma por usuario")
-    @PostMapping("/v1/sign")
+    @PostMapping("/v1/save")
     public ResponseEntity<GeneralResponse<Boolean>> saveConfig(@RequestBody GeneralRequest<DigitalSignConfIn> request) {
         GeneralResponse<Boolean> response = new GeneralResponse<>();
-        Boolean result = this.digitalSignatureService.saveConfig(request.getParams()).block();
+        Boolean result = this.digitalSignatureService.saveConfig(request.getParams());
         response.setData(result);
         return ResponseEntity.ok(response);
     }
