@@ -3,6 +3,7 @@ plugins {
 	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
 	id 'java'
 	id 'org.flywaydb.flyway' version '6.4.3'
+	id 'maven-publish'
 }
 
 group = 'cu.cujae.aica'
@@ -48,6 +49,17 @@ dependencies {
 jar {
 	manifest {
 		attributes 'Main-Class': 'cl.coopeuch.invierteya.msperfilamiento.MsPerfilamientoApplication'
+	}
+}
+
+publishing {
+	publications {
+		maven(MavenPublication) {
+			groupId = 'cu.cujae.aica'
+			artifactId = 'signdigital'
+			version = '0.0.1-SNAPSHOT'
+			from components.java
+		}
 	}
 }
 
